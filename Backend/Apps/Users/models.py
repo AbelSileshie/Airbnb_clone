@@ -15,6 +15,7 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=16, blank=True, null=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='guest')
     created_at = models.DateTimeField(auto_now_add=True)
+    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
 
 class Booking(models.Model):
     STATUS_CHOICES = [
