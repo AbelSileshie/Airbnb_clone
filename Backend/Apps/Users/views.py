@@ -1,4 +1,4 @@
-from .serializers import LoginSerializer
+from .serializers import RegisterSerializer, LoginSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,14 +20,6 @@ class LoginAPIView(APIView):
     )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-from .serializers import RegisterSerializer, LoginSerializer
-
 # API endpoint for user login
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -65,7 +57,7 @@ class RegisterAPIView(APIView):
     @swagger_auto_schema(
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['username', 'password', 'password2', 'first_name', 'last_name', 'address', 'age'],
+            required=['username', 'password', 'password2', 'first_name', 'last_name', 'address', 'age', 'phone_number', 'role'],
             properties={
                 'username': openapi.Schema(type=openapi.TYPE_STRING),
                 'password': openapi.Schema(type=openapi.TYPE_STRING, format='password'),
@@ -74,13 +66,15 @@ class RegisterAPIView(APIView):
                 'last_name': openapi.Schema(type=openapi.TYPE_STRING),
                 'address': openapi.Schema(type=openapi.TYPE_STRING),
                 'age': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                'role': openapi.Schema(type=openapi.TYPE_STRING, enum=['guest', 'host', 'admin']),
             },
         ),
         responses={201: openapi.Response('Account created successfully!'), 400: 'Bad Request'}
     )
     def post(self, request):
         data = request.data
-        required_fields = ['username', 'password', 'password2', 'first_name', 'last_name', 'address', 'age']
+        required_fields = ['username', 'password', 'password2', 'first_name', 'last_name', 'address', 'age', 'role']
         for field in required_fields:
             if field not in data:
                 return Response({'error': f'{field} is required.'}, status=status.HTTP_400_BAD_REQUEST)
