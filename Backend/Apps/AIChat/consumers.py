@@ -114,7 +114,7 @@ class AIChatConsumer(AsyncWebsocketConsumer):
             }))
             return
 
-        # Prepare backend context
+        # Prepare backend context and full chat history
         backend_info = (
             "Backend Overview: This project uses Django and Django REST Framework. "
             "It includes models for properties, bookings, payments, reviews, images, and AI chat messages. "
@@ -123,7 +123,16 @@ class AIChatConsumer(AsyncWebsocketConsumer):
             "Sensitive data such as user names, states, property ownership, and booking details are not accessible. "
             "You can ask about available models, endpoints, features, authentication, and general backend structure."
         )
+        # Only include the ID of the previous message for reference
+        from .models import AIChatMessage
+        from channels.db import database_sync_to_async
+        def get_last_message_id():
+            last_msg = AIChatMessage.objects.filter(user=user).order_by('-created_at').first()
+            return last_msg.id if last_msg else None
+        prev_msg_id = await database_sync_to_async(get_last_message_id)()
         context = backend_info
+        if prev_msg_id:
+            context += f"\nPrevious Message ID: {prev_msg_id}"
 
         # If the user asks about properties, include all properties in context
         properties_context = ""
