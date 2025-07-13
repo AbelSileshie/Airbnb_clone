@@ -40,4 +40,10 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('', include('Apps.Users.urls')),
     path('', include('Apps.Properties.urls')),
+    path('', include('Apps.Payment.urls')),
+    path('', include('Apps.AIChat.urls')),
 ]
+
+# Websocket endpoint for AIChat (handled by ASGI, not Django URLs):
+#     ws://localhost:8000/ws/aichat/ -> Apps.AIChat.consumers.AIChatConsumer (see Apps.AIChat.routing)
+#     Do not add websocket routes here.
