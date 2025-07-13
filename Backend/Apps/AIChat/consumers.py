@@ -9,10 +9,32 @@ GEMINI_API_KEY = os.getenv('GOOGLE_GEMINI_API_KEY')
 
 class AIChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Accept all connections for testing
-        await self.accept()
+        user = self.scope['user']
+        if user.is_authenticated:
+            await self.accept()
+            from .models import AIChatMessage
+            from .serializer import AIChatMessageSerializer
+            from channels.db import database_sync_to_async
+            def get_history():
+                qs = AIChatMessage.objects.filter(user=user).order_by('-created_at')[:10]
+                return list(qs)
+            history_list = await database_sync_to_async(get_history)()
+            from .serializer import AIChatMessageSerializer
+            chat_history = AIChatMessageSerializer(history_list, many=True).data
+            await self.send(text_data=json.dumps({
+                'chat_history': chat_history
+            }))
+        else:
+            await self.close()
 
     async def receive(self, text_data):
+        user = self.scope['user']
+        if not user.is_authenticated:
+            await self.send(text_data=json.dumps({
+                'error': 'Authentication required. Please login to use AI chat.'
+            }))
+            await self.close()
+            return
         try:
             data = json.loads(text_data)
             message = data.get('message', '')
@@ -21,6 +43,10 @@ class AIChatConsumer(AsyncWebsocketConsumer):
                 'error': 'Invalid or empty JSON message. Please send {"message": "your text"}.'
             }))
             return
+
+        # Fetch previous chat history for the user
+        from .models import AIChatMessage
+        chat_history = list(AIChatMessage.objects.filter(user=user).order_by('-created_at')[:10].values('message', 'response', 'created_at'))
 
         # Only include non-sensitive backend info in context
         backend_info = (
@@ -53,13 +79,11 @@ class AIChatConsumer(AsyncWebsocketConsumer):
 
         # Save chat to database
         try:
-            from .models import AIChatMessage
-            user = self.scope['user']
-            if user.is_authenticated:
-                AIChatMessage.objects.create(user=user, message=message, response=ai_response)
+            AIChatMessage.objects.create(user=user, message=message, response=ai_response)
         except Exception as db_exc:
             pass  # Optionally log db_exc
 
         await self.send(text_data=json.dumps({
-            'reply': ai_response
+            'reply': ai_response,
+            'chat_history': chat_history
         }))
